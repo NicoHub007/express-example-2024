@@ -3,8 +3,11 @@
 const express = require('express');
 // create your application
 const app = express();
+// set port
+const dotenv = require('dotenv');
+dotenv.config()
 
-// Import db/conn.js
+// import db/conn.js
 const db = require('./db/conn');
 // Import the body-parser package
 // This package contains middleware that can handle 
@@ -20,7 +23,8 @@ const methodOverride = require('method-override');
 const PORT = process.env.PORT || 5050;
 
 // import the data from the fake database files
-const fruits = require('./data/fruits');
+// const fruits = require('./data/fruits');
+const Fruit = require('./models/fruits');
 
 // set up the view engine to be able to use it
 app.set('view engine', 'jsx');
@@ -32,8 +36,8 @@ app.engine('jsx', jsxViewEngine());
 // we use the body-parser middleware first so that 
 // we have access to the parsed data within our routes.
 // the parsed data will be located in req.body
-app.use(bodyParser.urlencoded({ extended: true}));
-app.use(bodyParser.json({ extended: true}));
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json({ extended: true }));
 
 app.use(methodOverride('_method'));
 
@@ -99,57 +103,69 @@ app.get('/', (req, res) => {
     );
 })
 
-app.get('/params', (req, res) => {
-    console.log(req.params);
-    res.send(
-        '<h1>Route Parameters Example</h1>'
-    )
-})
-
-app.get('/params/:p1', (req, res) => {
-    console.log(req.params);
-    res.send(
-        `<h1>Route Parameters Example</h1><p>There is one parameter: ${req.params.p1}</p>`
-    )
-})
-
-app.get('/params/:p1/explanations', (req, res) => {
-    console.log(req.params);
-    res.send(
-        `<h1>This is where I explain ${req.params.p1} </h1> `
-    )
-
-})
-
-app.get('/params/:p1/:p2', (req, res) => {
-    console.log(req.params);
-    res.send(
-        `<h1>Route Parameters Example</h1><p>There are two parameters: ${req.params.p1} and ${req.params.p2}</p>`
-    )
-})
-
 app.get('/index', (req, res) => {
     res.send(
         '<h1>This is an index</h1>'
     )
 })
 
-app.get('/demo', (req, res) => {
-    res.render('Demo')
-})
+
 
 // ***** ABOVE HERE are NON-API routes
 
 // ***** BELOW is what you would typically see in an API with a clear split 
 // *****        between frontend and backend
+
+// add a seed route temporarily
+app.get('/api/fruits/seed', async (req, res) => {
+    try {
+        await Fruit.create([
+            {
+                name: 'grapefruit',
+                color: 'pink',
+                readyToEat: true
+            },
+            {
+                name: 'grapes',
+                color: 'purple',
+                readyToEat: true
+            },
+            {
+                name: 'apple',
+                color: 'green',
+                readyToEat: false
+            },
+            {
+                name: 'fig',
+                color: 'yellow',
+                readyToEat: true
+            },
+            {
+                name: 'grapes',
+                color: 'green',
+                readyToEat: false
+            },
+        ])
+
+        res.status(200).redirect('/api/fruits');
+    } catch (err) {
+        res.status(400).send(err);
+    }
+})
+
 // INDEX
 // this is called an index route, where you can see all of the data
 // THIS is one version of READ
 // READ many
 // this is only practical when you have small amounts of data
 // but you you can also use an index route and limit the number of responses
-app.get('/api/fruits', (req, res) => {
-    res.json(fruits);
+app.get('/api/fruits', async (req, res) => {
+    try {
+        const foundFruits = await Fruit.find({});
+        res.status(200).json(foundFruits);
+    } catch (err) {
+        res.status(400).send(err);
+    }
 })
 
 // N - NEW - allows a user to input a new fruit
@@ -200,7 +216,7 @@ app.patch('/api/fruits/:id', (req, res) => {
         // find the id and replace only they new properties
         console.log(fruits[req.params.id]);
         console.log(req.body)
-        const newFruit = {...fruits[req.params.id], ...req.body}
+        const newFruit = { ...fruits[req.params.id], ...req.body }
         fruits[req.params.id] = newFruit;
         res.json(fruits[req.params.id]);
     } else {
@@ -227,7 +243,7 @@ app.post('/api/fruits', (req, res) => {
 // E - Edit
 app.get('/fruits/:id/edit', (req, res) => {
     if (req.params.id >= 0 && req.params.id < fruits.length) {
-        res.render('fruits/Edit', { fruit: fruits[req.params.id], id: req.params.id});
+        res.render('fruits/Edit', { fruit: fruits[req.params.id], id: req.params.id });
     } else {
         res.send('<p>That is not a valid id</p>')
     }
@@ -235,7 +251,7 @@ app.get('/fruits/:id/edit', (req, res) => {
 
 // SHOW
 // another version of READ is called a show route
-// in this one, we can see more information on an idividual piece of data
+// in this one, we can see more information on an individual piece of data
 app.get('/api/fruits/:id', (req, res) => {
     // in this case, my unique identifier is going to be the array index
     // res.send(`<div>${req.params.id}</div>`)
@@ -262,7 +278,7 @@ app.get('/api/fruits/:id', (req, res) => {
 app.use((req, res) => {
     console.log('I am only in this middleware if no other routes have sent a response.')
     res.status(404);
-    res.json({ error: 'Resource not found'});
+    res.json({ error: 'Resource not found' });
 })
 
 
